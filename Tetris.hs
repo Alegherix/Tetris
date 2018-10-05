@@ -102,10 +102,10 @@ move inVec (Tetris (vec, shape) well shapes ) = (Tetris (newVec, shape) well sha
 
 tick :: Tetris -> Maybe (Int,Tetris)
 tick t
-  | collision t = Just(0, t) -- If a collision occurs, use the current shape
+  | collision t = Just(0, t)    -- If a collision occurs, use the current shape
   | otherwise = Just(0, newTet) -- If no colission, then use the new shape
   where
-    newTet = move (0, 1) t --
+    newTet = move (0, 1) t      -- Basic operation for moving a shape down 1 col
 
 
 
@@ -120,6 +120,9 @@ startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
 -- and @'Just' (n,t)@, when the game continues in a new state @t@.
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
 stepTetris Tick t = tick t
+stepTetris MoveDown t = tick t
+stepTetris MoveRight t = Just(0, movePiece 1 t)
+stepTetris MoveLeft t = Just(0, movePiece (-1) t)
 stepTetris _ t = Just (0,t)
 
 
@@ -127,6 +130,15 @@ stepTetris _ t = Just (0,t)
 -- col + x > fst wellSize - To far to the right
 -- row + y > snd wellSize -> To far down
 -- overlaps shape(faling shape) well
--- If either are True, then there is a collision
 collision :: Tetris -> Bool
 collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst wellSize, row + y+1 > snd wellSize, overlaps shape well]
+  where
+    (x, y) = vector
+    (col, row) = shapeSize shape
+
+movePiece :: Int -> Tetris -> Tetris
+movePiece nMove tetris
+  | collision movedPiece = tetris -- If a collision has occured, then send back the input as we can't move it
+  | otherwise = movedPiece        -- If no colission has occured, send back the moved piece.
+  where
+    movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,

@@ -32,6 +32,10 @@ data Tetris = Tetris (Vector,Shape) Shape [Shape]
 -- ** Positions and sizes
 
 
+well = padShapeTo (10,20)(S [[Nothing]])
+shapes = [testShape, testShape3, testShape2, testShape, testShape3, testShape2, testShape]
+testTetris = (Tetris (startPosition, testShape3) well shapes)
+
 position :: Tetris -> Vector
 position (Tetris (v,s) _ _ ) = v
 
@@ -97,7 +101,14 @@ move inVec (Tetris (vec, shape) well shapes ) = (Tetris (newVec, shape) well sha
 
 
 tick :: Tetris -> Maybe (Int,Tetris)
-tick t = Just(0, move (0, 1) t) -- return Just and the new Tetris after we've moved it.
+tick t
+  | collision t = Just(0, t) -- If a collision occurs, use the current shape
+  | otherwise = Just(0, newTet) -- If no colission, then use the new shape
+  where
+    newTet = move (0, 1) t --
+
+
+
 
 -- | The initial game state
 startTetris :: [Double] -> Tetris
@@ -110,3 +121,12 @@ startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
 stepTetris Tick t = tick t
 stepTetris _ t = Just (0,t)
+
+
+-- x Negativ = To far left
+-- col + x > fst wellSize - To far to the right
+-- row + y > snd wellSize -> To far down
+-- overlaps shape(faling shape) well
+-- If either are True, then there is a collision
+collision :: Tetris -> Bool
+collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst wellSize, row + y+1 > snd wellSize, overlaps shape well]

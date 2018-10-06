@@ -149,13 +149,15 @@ rotatePiece t
   | collision (rotate t) = t -- If collision occurs when rotating t, use previous state
   | otherwise = rotate t     -- Otherwise rotate
 
+
+-- Works but gotta change the combine to not use clash,
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
 dropNewPiece (Tetris (vec,shape) well shapes)
   | overlapping = Nothing         -- If Overlapping, then Nothing, as it's Game Over
   | otherwise = Just(0, newTet)   -- Otherwise update the game with the new state of the game.
   where
-    newWell = combine shape well    -- Since the current state of the game means that this shape has collided with something, we merge this incoming shape with the well. - Before we start letting the new shape fall
+    newWell = combine (place(vec, shape)) well    -- Since the current state of the game means that this shape has collided with something, we merge this incoming shape with the well. - Before we start letting the new shape fall
     newShape = place(startPosition, head shapes) --Extract the first element from shapes - this is our new shape to play with - and place at startPos - Do this before checking overlaps, Otherwise we always get error as the shape's default pos is (0,0)
     newShapes = drop 1 shapes               -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
     overlapping = overlaps newShape well    -- checks if there's an overlap between the well(and pieces inside of it) and the new shape at the start pos
-    newTet = (Tetris (startPosition, newShape) newWell newShapes) -- The new State of the Game
+    newTet = (Tetris ((0,0), newShape) newWell newShapes) -- The new State of the Game

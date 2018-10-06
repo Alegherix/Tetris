@@ -91,7 +91,7 @@ addWalls' n = wall
 drawTetris :: Tetris -> Shape
 drawTetris (Tetris (vec ,shape) well remShapes) = addWalls combS  -- Add black walls around the new shape and return a new Shape
   where
-    fallingS = shiftShape vec shape                               -- We shift the falling shape to the start position.
+    fallingS = place(vec, shape)                                   -- We shift the falling shape to the start position.
     combS = combine fallingS well                                 -- We combine i.e take the union of the well and the shape to put the shape inside the well
 
 move :: Vector -> Tetris -> Tetris
@@ -102,15 +102,13 @@ move inVec (Tetris (vec, shape) well shapes ) = (Tetris (newVec, shape) well sha
 
 tick :: Tetris -> Maybe (Int,Tetris)
 tick t
-  | collision t = Just(0, t)    -- If a collision occurs, use the current shape
-  | otherwise = Just(0, newTet) -- If no colission, then use the new shape
+  | collision t = dropNewPiece t --(Just(0, t) -- Returns the old state, I.e stuck at bottom) 7C, If a collision occurs, send this current state of the game to dropNewPiece
+  | otherwise = Just(0, newTet) -- If no colission, then use the updated shape, which is 1 col down/tick
   where
-    newTet = move (0, 1) t      -- Basic operation for moving a shape down 1 col
-
-
-
+    newTet = move (0, 1) t      -- Basic operation for moving a shape down 1 col -- Default action for each gameTick
 
 -- | The initial game state
+--
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
@@ -129,7 +127,7 @@ stepTetris Rotate t = Just(0, rotatePiece t)
 -- x Negativ = To far left
 -- col + x > fst wellSize - To far to the right
 -- row + y > snd wellSize -> To far down
--- overlaps shape(faling shape) well
+-- overlaps shape(falling shape) well
 collision :: Tetris -> Bool
 collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst wellSize, row + y+1 > snd wellSize, overlaps shape well]
   where
@@ -138,7 +136,7 @@ collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst well
 
 movePiece :: Int -> Tetris -> Tetris
 movePiece nMove tetris
-  | collision movedPiece = tetris -- If a collision has occured, then send back the input as we can't move it
+  | collision movedPiece = tetris -- If a collision has occured, return to old state as we can't move it
   | otherwise = movedPiece        -- If no colission has occured, send back the moved piece.
   where
     movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,
@@ -148,19 +146,16 @@ rotate (Tetris (vector, shape) well shapes) = (Tetris (vector, (rotateShape shap
 
 rotatePiece :: Tetris -> Tetris
 rotatePiece t
-  | collision rotatedPiece = t
-  | otherwise = rotatedPiece
-  where
-    rotatedPiece = rotate t
+  | collision (rotate t) = t -- If collision occurs when rotating t, use previous state
+  | otherwise = rotate t     -- Otherwise rotate
 
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
 dropNewPiece (Tetris (vec,shape) well shapes)
-  | overlapping = Nothing
-  | otherwise = Just(0, newTet)
+  | overlapping = Nothing         -- If Overlapping, then Nothing, as it's Game Over
+  | otherwise = Just(0, newTet)   -- Otherwise update the game with the new state of the game.
   where
-    newShape = head shapes      --Extract the first element from shapes
-    newShapes = drop 1 shapes -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
-    inPlace = place (startPosition, newShape) -- Places the new piece in the starting Position
-    overlapping = overlaps well inPlace    -- checks if there's an overlap between the well(and pieces inside of it) and the newPiece at the start pos
-    combineShapes = combine well inPlace      -- Merges the new piece with the existing well
-    newTet = (Tetris (vec, combineShapes), well newShapes)
+    newWell = combine shape well    -- Since the current state of the game means that this shape has collided with something, we merge this incoming shape with the well. - Before we start letting the new shape fall
+    newShape = place(startPosition, head shapes) --Extract the first element from shapes - this is our new shape to play with - and place at startPos - Do this before checking overlaps, Otherwise we always get error as the shape's default pos is (0,0)
+    newShapes = drop 1 shapes               -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
+    overlapping = overlaps newShape well    -- checks if there's an overlap between the well(and pieces inside of it) and the new shape at the start pos
+    newTet = (Tetris (startPosition, newShape) newWell newShapes) -- The new State of the Game

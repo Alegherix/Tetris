@@ -123,7 +123,7 @@ stepTetris Tick t = tick t
 stepTetris MoveDown t = tick t
 stepTetris MoveRight t = Just(0, movePiece 1 t)
 stepTetris MoveLeft t = Just(0, movePiece (-1) t)
-stepTetris _ t = Just (0,t)
+stepTetris Rotate t = Just(0, rotatePiece t)
 
 
 -- x Negativ = To far left
@@ -142,3 +142,25 @@ movePiece nMove tetris
   | otherwise = movedPiece        -- If no colission has occured, send back the moved piece.
   where
     movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,
+
+rotate :: Tetris -> Tetris
+rotate (Tetris (vector, shape) well shapes) = (Tetris (vector, (rotateShape shape))well shapes)
+
+rotatePiece :: Tetris -> Tetris
+rotatePiece t
+  | collision rotatedPiece = t
+  | otherwise = rotatedPiece
+  where
+    rotatedPiece = rotate t
+
+dropNewPiece :: Tetris -> Maybe (Int,Tetris)
+dropNewPiece (Tetris (vec,shape) well shapes)
+  | overlapping = Nothing
+  | otherwise = Just(0, newTet)
+  where
+    newShape = head shapes      --Extract the first element from shapes
+    newShapes = drop 1 shapes -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
+    inPlace = place (startPosition, newShape) -- Places the new piece in the starting Position
+    overlapping = overlaps well inPlace    -- checks if there's an overlap between the well(and pieces inside of it) and the newPiece at the start pos
+    combineShapes = combine well inPlace      -- Merges the new piece with the existing well
+    newTet = (Tetris (vec, combineShapes), well newShapes)

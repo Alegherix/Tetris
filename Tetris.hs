@@ -3,7 +3,7 @@ module Main where
 import ConsoleGUI       -- cabal install ansi-terminal
 --import CodeWorldGUI     -- cabal install codeworld-api
 import Shapes
-import Data.List(transpose)
+import Data.List(transpose, deleteFirstsBy)
 import Data.Maybe(isNothing, isJust)
 
 --------------------------------------------------------------------------------
@@ -39,7 +39,9 @@ newTestShape = place ((0,17),testShape)  -- First testShape to work on combine w
 newTestShape2 = place((0,15), testShape) -- Other testShape to work with
 newWell = combine well newTestShape     -- New well with the first testShape at the bottom.
 buggWell = combine newTestShape2 newWell -- The last well with the pieces Overlapping showing as black -- Error, we need them to stick on eachother
-testDoubles = [0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66]
+testShape1 = S([Just Black, Just Black] : testRows)
+testShape1R = [Just Black, Just Black] : testRows
+
 
 position :: Tetris -> Vector
 position (Tetris (v,s) _ _ ) = v
@@ -109,6 +111,7 @@ tick t
   | collision t = dropNewPiece t --If a collision occurs, send this current state of the game to dropNewPiece
   | otherwise = Just(0, move (0, 1) t) -- If no colission, then use the updated shape, which is 1 col down/tick
 
+
 -- | The initial game state
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
@@ -157,15 +160,34 @@ rotatePiece t
   | collision (rotate t) = t -- If collision occurs when rotating t, use previous state
   | otherwise = rotate t     -- Otherwise rotate
 
-
+-- C10 Completed
 -- Works but gotta change the combine to not use clash,
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
 dropNewPiece (Tetris (vec,shape) well shapes)
   | overlapping = Nothing         -- If Overlapping, then Nothing, as it's Game Over
-  | otherwise = Just(0, newTet)   -- Otherwise update the game with the new state of the game.
+  | otherwise = Just(nCleared, newTet)   -- Otherwise update the game with the new state of the game.
   where
-    newWell = combine (place(vec, shape)) well    -- Since the current state of the game means that this shape has collided with something, we merge this incoming shape with the well. - Before we start letting the new shape fall
+    newWell = combine (place(vec, shape)) well   -- Since the current state of the game means that this shape has collided with something, we merge this incoming shape with the well. - Before we start letting the new shape fall
+    (nCleared, clearedWell) = clearLines newWell -- Clears the completed Rows if any, and returns the amount of cleared rows, aswell as the new Well
     newShape = place(startPosition, head shapes) --Extract the first element from shapes - this is our new shape to play with - and place at startPos - Do this before checking overlaps, Otherwise we always get error as the shape's default pos is (0,0)
-    newShapes = drop 1 shapes               -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
-    overlapping = overlaps newShape well    -- checks if there's an overlap between the well(and pieces inside of it) and the new shape at the start pos
-    newTet = (Tetris ((0,0), newShape) newWell newShapes) -- The new State of the Game
+    newShapes = drop 1 shapes                    -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
+    overlapping = overlaps newShape well         -- checks if there's an overlap between the well(and pieces inside of it) and the new shape at the start pos
+    newTet = (Tetris ((0,0), newShape) clearedWell newShapes) -- The new State of the Game
+
+
+--C.09
+-- Helper for Clearlines
+isComplete :: Row -> Bool
+isComplete row = length(listOfColour) == rowLength -- if the length of our listOfColour is equal to the amount of squares, then the entire row is filled, therefore Completed
+  where
+    rowLength = length row        -- Gets the amount of squares in the row
+    listOfColour = filter isJust row  -- Filters out all the colours into a single list
+
+-- Clears the lines and returns amount of rows cleared, and the new Shape
+clearLines :: Shape -> (Int,Shape)
+clearLines shape = (nRowsDone, shiftedNewShape)
+  where
+    doneRows = filter isComplete (rows shape) -- Gives a list of the completed rows
+    nRowsDone = length doneRows               -- Finds out how many rows we've cleared
+    newShape = deleteFirstsBy (==) (rows shape) doneRows  -- Deletes the first occurence of the element from the second list, in the first list. I.e we remove all the completed rows.
+    shiftedNewShape = shiftShape (0, nRowsDone) (S newShape) -- Shifts the new shape down the amount of rows we've cleared, and add spaces over it

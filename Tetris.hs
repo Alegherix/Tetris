@@ -134,6 +134,7 @@ stepTetris MoveLeft t = Just(0, movePiece (-1) t)
 stepTetris Rotate t = Just(0, rotatePiece t)
 
 
+--C01
 -- x Negativ = To far left
 -- col + x > fst wellSize - To far to the right
 -- row + y > snd wellSize -> To far down
@@ -141,10 +142,11 @@ stepTetris Rotate t = Just(0, rotatePiece t)
 collision :: Tetris -> Bool
 collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst wellSize, row + y+1 > snd wellSize, overlapping]
   where
-    (x, y) = vector
-    (col, row) = shapeSize shape
+    (x, y) = vector                                     -- Gets the points from the vector for comparison
+    (col, row) = shapeSize shape                        -- Gets the size from shape for comparison
     overlapping = overlaps (place (vector,shape)) well  -- Places the shape in correct spot, then check for overlaps between shape and well
 
+--C03
 movePiece :: Int -> Tetris -> Tetris
 movePiece nMove tetris
   | collision movedPiece = tetris -- If a collision has occured, return to old state as we can't move it
@@ -152,9 +154,11 @@ movePiece nMove tetris
     where
       movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,    movedPiece = move (nmove, 0)
 
+--C04
 rotate :: Tetris -> Tetris
 rotate (Tetris (vector, shape) well shapes) = (Tetris (vector, (rotateShape shape))well shapes)
 
+--C06
 rotatePiece :: Tetris -> Tetris
 rotatePiece t
   | collision (rotate t) = t -- If collision occurs when rotating t, use previous state
@@ -180,7 +184,7 @@ dropNewPiece (Tetris (vec,shape) well shapes)
 isComplete :: Row -> Bool
 isComplete row = length(listOfColour) == rowLength -- if the length of our listOfColour is equal to the amount of squares, then the entire row is filled, therefore Completed
   where
-    rowLength = length row        -- Gets the amount of squares in the row
+    rowLength = length row            -- Gets the amount of squares in the row
     listOfColour = filter isJust row  -- Filters out all the colours into a single list
 
 -- Clears the lines and returns amount of rows cleared, and the new Shape

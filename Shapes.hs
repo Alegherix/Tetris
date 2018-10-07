@@ -205,7 +205,7 @@ twoRows s1 s2 = ((rows s1), (rows s2))
 
 
 -- Maps isJust to the rows, to get a list of bools [[F,F],[T,T]]
--- then map and to these lists to get a combined answer ->[[F],[T]]
+-- then map and to these lists to get a combined answer ->[F,T]
 -- Finally evaluate the expression with an or, so that if either of them are True, then return True as they overlap
 rowsOverlap :: Row -> Row -> Bool
 rowsOverlap firstRow secondRow = or(map and [map isJust [firstRow !! i, secondRow !! i] | i <- [0..1]])
@@ -217,8 +217,9 @@ padHelper s1 s2 = (s1Row, s2Row)
   where
     ((c1, r1):(c2, r2):_) = map shapeSize [s1, s2]      -- Uses map to extract the shapeSizes of both the shapes, and pattern match each value to a variable
     lengths = map maximum [[c1,c2],[r1,r2]]            --maps the maximum, to get the max length of row and col to know how to padShapeTo
-    shapes = map (padShapeTo (lengths !! 0, lengths !! 1)) [s1, s2] -- We padd all the shapes, to make sure that we can compare our rows properly.
+    shapes = map (padShapeTo (lengths !! 0, lengths !! 1)) [s1, s2] -- We padd all the shapes, to make sure that we can compare our rows properly. - as More Nothing won't interfere with anything
     (s1Row, s2Row) = twoRows (shapes !! 0) (shapes !! 1)            -- Extract the rows for the newly Padded Shapes.
+
 
 clash :: Square -> Square -> Square
 clash Nothing Nothing = Nothing

@@ -35,6 +35,11 @@ data Tetris = Tetris (Vector,Shape) Shape [Shape]
 well = padShapeTo (10,20)(S [[Nothing]])
 shapes = [testShape, testShape3, testShape2, testShape, testShape3, testShape2, testShape]
 testTetris = (Tetris (startPosition, testShape3) well shapes)
+newTestShape = place ((0,17),testShape)  -- First testShape to work on combine with
+newTestShape2 = place((0,15), testShape) -- Other testShape to work with
+newWell = combine well newTestShape     -- New well with the first testShape at the bottom.
+buggWell = combine newTestShape2 newWell -- The last well with the pieces Overlapping showing as black -- Error, we need them to stick on eachother
+testDoubles = [0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66,0.15,0.88,0.65,0.77,0.66]
 
 position :: Tetris -> Vector
 position (Tetris (v,s) _ _ ) = v
@@ -85,7 +90,6 @@ addWalls' n = wall
   where
     wall = replicate n (Just Black)
 
-
 -- | Visualize the current game state. This is what the user will see
 -- when playing the game.
 drawTetris :: Tetris -> Shape
@@ -102,17 +106,20 @@ move inVec (Tetris (vec, shape) well shapes ) = (Tetris (newVec, shape) well sha
 
 tick :: Tetris -> Maybe (Int,Tetris)
 tick t
-  | collision t = dropNewPiece t --(Just(0, t) -- Returns the old state, I.e stuck at bottom) 7C, If a collision occurs, send this current state of the game to dropNewPiece
-  | otherwise = Just(0, newTet) -- If no colission, then use the updated shape, which is 1 col down/tick
-  where
-    newTet = move (0, 1) t      -- Basic operation for moving a shape down 1 col -- Default action for each gameTick
+  | collision t = dropNewPiece t --If a collision occurs, send this current state of the game to dropNewPiece
+  | otherwise = Just(0, move (0, 1) t) -- If no colission, then use the updated shape, which is 1 col down/tick
 
 -- | The initial game state
---
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
-    shape1:supply = repeat (allShapes!!1) -- incomplete !!!
+    numberList = [getNumber n | n <- rs]                -- Generate a random number based on the double
+    shape1:supply = [allShapes !! n | n <- numberList]  -- From that random number, generate shapes.
+
+-- Helper for startTetris to generate a random number
+getNumber :: Double -> Int
+getNumber double = floor(fromIntegral(length allShapes)* double)
+
 
 -- | React to input. The function returns 'Nothing' when it's game over,
 -- and @'Just' (n,t)@, when the game continues in a new state @t@.
@@ -127,19 +134,20 @@ stepTetris Rotate t = Just(0, rotatePiece t)
 -- x Negativ = To far left
 -- col + x > fst wellSize - To far to the right
 -- row + y > snd wellSize -> To far down
--- overlaps shape(falling shape) well
+-- overlaps shape(falling shape) well.
 collision :: Tetris -> Bool
-collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst wellSize, row + y+1 > snd wellSize, overlaps shape well]
+collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst wellSize, row + y+1 > snd wellSize, overlapping]
   where
     (x, y) = vector
     (col, row) = shapeSize shape
+    overlapping = overlaps (place (vector,shape)) well  -- Places the shape in correct spot, then check for overlaps between shape and well
 
 movePiece :: Int -> Tetris -> Tetris
 movePiece nMove tetris
   | collision movedPiece = tetris -- If a collision has occured, return to old state as we can't move it
   | otherwise = movedPiece        -- If no colission has occured, send back the moved piece.
-  where
-    movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,
+    where
+      movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,    movedPiece = move (nmove, 0)
 
 rotate :: Tetris -> Tetris
 rotate (Tetris (vector, shape) well shapes) = (Tetris (vector, (rotateShape shape))well shapes)

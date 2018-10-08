@@ -35,7 +35,8 @@ data Tetris = Tetris (Vector,Shape) Shape [Shape]
 well = padShapeTo (10,20)(S [[Nothing]])
 shapes = [testShape, testShape3, testShape2, testShape, testShape3, testShape2, testShape]
 testTetris = (Tetris (startPosition, testShape3) well shapes)
-newTestShape = place ((0,17),testShape)  -- First testShape to work on combine with
+workingShape = rotateShape testShape2
+newTestShape = place ((10-3,0), workingShape)  -- First testShape to work on combine with
 newTestShape2 = place((0,15), testShape) -- Other testShape to work with
 newWell = combine well newTestShape     -- New well with the first testShape at the bottom.
 buggWell = combine newTestShape2 newWell -- The last well with the pieces Overlapping showing as black -- Error, we need them to stick on eachother
@@ -100,6 +101,7 @@ drawTetris (Tetris (vec ,shape) well remShapes) = addWalls combS  -- Add black w
     fallingS = place(vec, shape)                                   -- We shift the falling shape to the start position.
     combS = combine fallingS well                                 -- We combine i.e take the union of the well and the shape to put the shape inside the well
 
+
 move :: Vector -> Tetris -> Tetris
 move inVec (Tetris (vec, shape) well shapes ) = (Tetris (newVec, shape) well shapes ) -- returns the new Tetris after we've moved it by some vector
   where
@@ -118,6 +120,7 @@ startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
   where
     numberList = [getNumber n | n <- rs]                -- Generate a random number based on the double
     shape1:supply = [allShapes !! n | n <- numberList]  -- From that random number, generate shapes.
+
 
 -- Helper for startTetris to generate a random number
 getNumber :: Double -> Int
@@ -146,6 +149,7 @@ collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst well
     (col, row) = shapeSize shape                        -- Gets the size from shape for comparison
     overlapping = overlaps (place (vector,shape)) well  -- Places the shape in correct spot, then check for overlaps between shape and well
 
+
 --C03
 movePiece :: Int -> Tetris -> Tetris
 movePiece nMove tetris
@@ -154,17 +158,22 @@ movePiece nMove tetris
     where
       movedPiece = move (nMove, 0) tetris -- Move the shape in either L or R direction,    movedPiece = move (nmove, 0)
 
+
 --C04
 rotate :: Tetris -> Tetris
 rotate (Tetris (vector, shape) well shapes) = (Tetris (vector, (rotateShape shape))well shapes)
 
+
 --C06
 rotatePiece :: Tetris -> Tetris
 rotatePiece t
-  | collision (rotate t) = t -- If collision occurs when rotating t, use previous state
-  | otherwise = rotate t     -- Otherwise rotate
+  | collision adjusted = t -- If collision occurs when rotating t, use previous state
+  | otherwise = adjusted     -- Otherwise rotate
+  where
+    adjusted = adjust (rotate t) -- Adjust the rotated piece, use when the properly working
 
--- C10 Completed
+
+-- C10 Completed - Second line in the where
 -- Works but gotta change the combine to not use clash,
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
 dropNewPiece (Tetris (vec,shape) well shapes)
@@ -195,3 +204,18 @@ clearLines shape = (nRowsDone, shiftedNewShape)
     nRowsDone = length doneRows               -- Finds out how many rows we've cleared
     newShape = deleteFirstsBy (==) (rows shape) doneRows  -- Deletes the first occurence of the element from the second list, in the first list. I.e we remove all the completed rows.
     shiftedNewShape = shiftShape (0, nRowsDone) (S newShape) -- Shifts the new shape down the amount of rows we've cleared, and add spaces over it
+
+--Fix RightVector och toFarRight
+--C05
+adjust :: Tetris -> Tetris
+adjust (Tetris (vec, shape) well shapes)
+  | toFarLeft  = (Tetris (leftVector, shape) well shapes)  -- The shape is to far to the left and would overlap, therefore move the shape to the farthest left
+  | toFarRight = (Tetris (rightVector, shape) well shapes) -- the shape is to far to the Right and would overlap, therefore move the shape to the farthest Right
+  | otherwise =  (Tetris (vec, shape) well shapes)
+  where
+    (col, row)  = shapeSize shape -- Gets the sizes of the shape
+    (x, y)      = vec             -- Gets the current place in horisontal position
+    toFarLeft   = x < 0           -- If <0, to far left, and we need to fix
+    toFarRight  = (x + col) > 10  -- if >10 to far to the right and we need to fix
+    leftVector  = (0, y)          -- This would be the new position for the shape if to far to the left
+    rightVector = ((10-col), y)   -- This would be the new Position for the shape if to far to the right

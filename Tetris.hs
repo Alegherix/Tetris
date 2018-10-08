@@ -163,17 +163,30 @@ movePiece nMove tetris
 rotate :: Tetris -> Tetris
 rotate (Tetris (vector, shape) well shapes) = (Tetris (vector, (rotateShape shape))well shapes)
 
+--C05
+--If <0, to far left, and we need to fix
+--if >10 to far to the right and we need to fix
+adjust :: Tetris -> Tetris
+adjust (Tetris (vec, shape) well shapes)
+  | x < 0  = (Tetris (leftVector, shape) well shapes)  -- The shape is to far to the left and would overlap, therefore move the shape to the farthest left
+  | (x + col) > 10 = (Tetris (rightVector, shape) well shapes) -- the shape is to far to the Right and would overlap, therefore move the shape to the farthest Right
+  | otherwise =  (Tetris (vec, shape) well shapes)
+  where
+    (col, row)  = shapeSize shape -- Gets the sizes of the shape
+    (x, y)      = vec             -- Gets the current place in horisontal position
+    leftVector  = (0, y)          -- This would be the new position for the shape if to far to the left
+    rightVector = ((10-col), y)   -- This would be the new Position for the shape if to far to the right
 
 --C06
 rotatePiece :: Tetris -> Tetris
 rotatePiece t
-  | collision adjusted = t -- If collision occurs when rotating t, use previous state
+  | collision adjusted = t   -- If collision occurs when rotating t, use previous state
   | otherwise = adjusted     -- Otherwise rotate
   where
     adjusted = adjust (rotate t) -- Adjust the rotated piece, use when the properly working
 
 
--- C10 Completed - Second line in the where
+-- C07
 -- Works but gotta change the combine to not use clash,
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
 dropNewPiece (Tetris (vec,shape) well shapes)
@@ -204,18 +217,3 @@ clearLines shape = (nRowsDone, shiftedNewShape)
     nRowsDone = length doneRows               -- Finds out how many rows we've cleared
     newShape = deleteFirstsBy (==) (rows shape) doneRows  -- Deletes the first occurence of the element from the second list, in the first list. I.e we remove all the completed rows.
     shiftedNewShape = shiftShape (0, nRowsDone) (S newShape) -- Shifts the new shape down the amount of rows we've cleared, and add spaces over it
-
---Fix RightVector och toFarRight
---C05
-adjust :: Tetris -> Tetris
-adjust (Tetris (vec, shape) well shapes)
-  | toFarLeft  = (Tetris (leftVector, shape) well shapes)  -- The shape is to far to the left and would overlap, therefore move the shape to the farthest left
-  | toFarRight = (Tetris (rightVector, shape) well shapes) -- the shape is to far to the Right and would overlap, therefore move the shape to the farthest Right
-  | otherwise =  (Tetris (vec, shape) well shapes)
-  where
-    (col, row)  = shapeSize shape -- Gets the sizes of the shape
-    (x, y)      = vec             -- Gets the current place in horisontal position
-    toFarLeft   = x < 0           -- If <0, to far left, and we need to fix
-    toFarRight  = (x + col) > 10  -- if >10 to far to the right and we need to fix
-    leftVector  = (0, y)          -- This would be the new position for the shape if to far to the left
-    rightVector = ((10-col), y)   -- This would be the new Position for the shape if to far to the right

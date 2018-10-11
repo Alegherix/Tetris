@@ -121,7 +121,6 @@ startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
     numberList = [getNumber n | n <- rs]                -- Generate a random number based on the double
     shape1:supply = [allShapes !! n | n <- numberList]  -- From that random number, generate shapes.
 
-
 -- Helper for startTetris to generate a random number
 getNumber :: Double -> Int
 getNumber double = floor(fromIntegral(length allShapes)* double)
@@ -147,7 +146,7 @@ collision (Tetris (vector,shape) well remShapes) = or [x < 0, col + x > fst well
   where
     (x, y) = vector                                     -- Gets the points from the vector for comparison
     (col, row) = shapeSize shape                        -- Gets the size from shape for comparison
-    overlapping = overlaps (place (vector,shape)) well  -- Places the shape in correct spot, then check for overlaps between shape and well
+    overlapping = overlaps (place ((x, (y+1)),shape)) well  -- Places the shape in correct spot, then check for overlaps between shape and well
 
 
 --C03

@@ -198,50 +198,29 @@ padShapeTo (col, row) shape = padding
     padding = padShape ((col-curCol),(row-curRow)) shape  -- Pads to the given sizen, by adding the difference
 
 -- * Comparing and combining shapes
+-- B01
+overlaps :: Shape -> Shape -> Bool
+overlaps (S rs1) (S rs2) = or $ zipWith rowsOverlap rs1 rs2 -- Vi vill att Raderna ska få funktionen rowsOverlap callad på sig, där varje rad iterativ gås igenom för de båda [rowsen]
 
--- Helper to more nicley get the first and second row when we're working with 2 shapes
-twoRows :: Shape -> Shape -> ([Row],[Row])
-twoRows s1 s2 = ((rows s1), (rows s2))
-
-
--- Maps isJust to the rows, to get a list of bools [[F,F],[T,T]]
--- then map and to these lists to get a combined answer ->[F,T]
--- Finally evaluate the expression with an or, so that if either of them are True, then return True as they overlap
 rowsOverlap :: Row -> Row -> Bool
-rowsOverlap firstRow secondRow = or(map and [map isJust [firstRow !! i, secondRow !! i] | i <- [0..1]])
+rowsOverlap row1 row2 = or $ zipWith squareOverlapping row1 row2  -- Vi vill att varje element(Square) i raden ska få en funktion callad på sig, slutligen vill vi utvärdera detta med or
+  where squareOverlapping sq1 sq2 = isJust sq1 && isJust sq2 -- funktionen tar in 2 argument och Om båda elementen är isJust så True, annars false. vi får en lista [False, True etc]
 
-
--- Takes 2 shapes, get their sizes, then padds them and return the rows so we can compare rows with eachother
-padHelper :: Shape -> Shape -> ([Row],[Row])
-padHelper s1 s2 = (s1Row, s2Row)
-  where
-    ((c1, r1):(c2, r2):_) = map shapeSize [s1, s2]      -- Uses map to extract the shapeSizes of both the shapes, and pattern match each value to a variable
-    lengths = map maximum [[c1,c2],[r1,r2]]            --maps the maximum, to get the max length of row and col to know how to padShapeTo
-    shapes = map (padShapeTo (lengths !! 0, lengths !! 1)) [s1, s2] -- We padd all the shapes, to make sure that we can compare our rows properly. - as More Nothing won't interfere with anything
-    (s1Row, s2Row) = twoRows (shapes !! 0) (shapes !! 1)            -- Extract the rows for the newly Padded Shapes.
-
+--B02
+zipShapeWith ::(Square -> Square -> Square) -> Shape -> Shape -> Shape
+zipShapeWith function (S rs1) (S rs2) = S $ zipWith (zipWith function) rs1 rs2
 
 clash :: Square -> Square -> Square
-clash Nothing Nothing = Nothing
-clash Nothing s       = s
-clash s       Nothing = s
-clash (Just c1) (Just c2) = Just Black
+clash Nothing s       =  s
+clash s       Nothing =  s
+clash _             _ = Nothing
 
--- ** B01
--- | Test if two shapes overlap
-overlaps :: Shape -> Shape -> Bool
-overlaps s1 s2 = or([rowsOverlap (s1Row !! i) (s2Row !! i) | i <- [0..(length s1Row)-1]]) -- Send each row to rowsOverlap and save the result, then evaluate the final list
-  where
-    (s1Row, s2Row) = padHelper s1 s2  -- Extract the rows for the newly Padded Shapes after they've been worked in padHelper
 
--- ** B02
--- | zipShapeWith, like 'zipWith' for lists
--- Creates a list of rows by Zipping with a given function, Then create a new shape with the combination of these rows.
-zipShapeWith :: (Square->Square->Square) -> Shape -> Shape -> Shape
-zipShapeWith function s1 s2 = (S [zipWith function (s1Row !! i) (s2Row !! i) | i <- [0..(length s1Row) -1]])
-  where
-    (s1Row, s2Row) = padHelper s1 s2 -- Extract the rows for the newly Padded Shapes after they've been worked in padHelper
-
--- ** B03
 combine :: Shape -> Shape -> Shape
-combine s1 s2 = zipShapeWith clash s1 s2    -- Combine calls the zipShapeWith, which calls shapeSize and padShapeWith
+combine s1 s2
+ | overlaps s1 s2 = error "Shapes overlaps!"
+ | otherwise = zipShapeWith clash (shapes!!0) (shapes!!1)
+    where
+      ((c1, r1):(c2, r2):_) = map shapeSize [s1, s2]      -- Uses map to extract the shapeSizes of both the shapes, and pattern match each value to a variable
+      lengths = map maximum [[c1,c2],[r1,r2]]            --maps the maximum, to get the max length of row and col to know how to padShapeTo
+      shapes = map (padShapeTo (lengths !! 0, lengths !! 1)) [s1, s2] -- We padd all the shapes, to make sure that we can compare our rows properly. - as More Nothing won't interfere with anything

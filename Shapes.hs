@@ -213,14 +213,12 @@ zipShapeWith function (S rs1) (S rs2) = S $ zipWith (zipWith function) rs1 rs2
 clash :: Square -> Square -> Square
 clash Nothing s       =  s
 clash s       Nothing =  s
-clash _             _ = Nothing
+clash _             _ = Just Black
 
 
 combine :: Shape -> Shape -> Shape
-combine s1 s2
- | overlaps s1 s2 = error "Shapes overlaps!"
- | otherwise = zipShapeWith clash (shapes!!0) (shapes!!1)
-    where
-      ((c1, r1):(c2, r2):_) = map shapeSize [s1, s2]      -- Uses map to extract the shapeSizes of both the shapes, and pattern match each value to a variable
-      lengths = map maximum [[c1,c2],[r1,r2]]            --maps the maximum, to get the max length of row and col to know how to padShapeTo
-      shapes = map (padShapeTo (lengths !! 0, lengths !! 1)) [s1, s2] -- We padd all the shapes, to make sure that we can compare our rows properly. - as More Nothing won't interfere with anything
+combine s1 s2 = zipShapeWith clash p1 p2
+  where
+    ((c1, r1):(c2, r2):_) = map shapeSize [s1, s2] -- Gets the col and rows
+    (mC:mR:_) = zipWith max [c1, r1] [c2,r2]      -- gets the max val for col and rows
+    (p1:p2:_) = map (padShapeTo (mC,mR)) [s1,s2]  -- maps the padding to both shapes, then extract

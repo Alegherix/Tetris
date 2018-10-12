@@ -32,18 +32,6 @@ data Tetris = Tetris (Vector,Shape) Shape [Shape]
 -- ** Positions and sizes
 
 
-well = padShapeTo (10,20)(S [[Nothing]])
-shapes = [testShape, testShape3, testShape2, testShape, testShape3, testShape2, testShape]
-testTetris = (Tetris (startPosition, testShape3) well shapes)
-workingShape = rotateShape testShape2
-newTestShape = place ((10-3,0), workingShape)  -- First testShape to work on combine with
-newTestShape2 = place((0,15), testShape) -- Other testShape to work with
-newWell = combine well newTestShape     -- New well with the first testShape at the bottom.
-buggWell = combine newTestShape2 newWell -- The last well with the pieces Overlapping showing as black -- Error, we need them to stick on eachother
-testShape1 = S([Just Black, Just Black] : testRows)
-testShape1R = [Just Black, Just Black] : testRows
-
-
 position :: Tetris -> Vector
 position (Tetris (v,s) _ _ ) = v
 
@@ -179,34 +167,26 @@ adjust (Tetris (vec, shape) well shapes)
 --C06
 rotatePiece :: Tetris -> Tetris
 rotatePiece t
-  | collision adjusted = t   -- If collision occurs when rotating t, use previous state
-  | otherwise = adjusted     -- Otherwise rotate
+  | collision $ rotate t = t   -- If collision occurs when rotating t, use previous state
+  | otherwise = rotate t     -- Otherwise rotate
   where
-    adjusted = adjust (rotate t) -- Adjust the rotated piece, use when the properly working
+    --adjusted = adjust (rotate t) -- Adjust the rotated piece, use when the properly working
 
 
--- C07
--- Works but gotta change the combine to not use clash,
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
-dropNewPiece (Tetris (vec,shape) well shapes)
-  | overlapping = Nothing         -- If Overlapping, then Nothing, as it's Game Over
-  | otherwise = Just(nCleared, newTet)   -- Otherwise update the game with the new state of the game.
-  where
-    newWell = combine (place(vec, shape)) well   -- Since the current state of the game means that this shape has collided with something, we merge this incoming shape with the well. - Before we start letting the new shape fall
-    (nCleared, clearedWell) = clearLines newWell -- Clears the completed Rows if any, and returns the amount of cleared rows, aswell as the new Well
-    newShape = place(startPosition, head shapes) --Extract the first element from shapes - this is our new shape to play with - and place at startPos - Do this before checking overlaps, Otherwise we always get error as the shape's default pos is (0,0)
-    newShapes = drop 1 shapes                    -- Drops first element from the shapes, I.e we update the shapes, so we do not keep drawing the same piece
-    overlapping = overlaps newShape well         -- checks if there's an overlap between the well(and pieces inside of it) and the new shape at the start pos
-    newTet = (Tetris ((0,0), newShape) clearedWell newShapes) -- The new State of the Game
-
+dropNewPiece (Tetris (vec,shape) w supply)
+  | overlaps newShape w = Nothing
+  | otherwise = Just(nCleared, nt)
+    where
+      newShape = (place (startPosition, head supply))
+      newWell = combine (place(vec, shape)) w
+      nt = (Tetris ((startPosition), head supply) clearedWell (drop 1 supply))
+      (nCleared, clearedWell) = clearLines newWell
 
 --C.09
 -- Helper for Clearlines
 isComplete :: Row -> Bool
-isComplete row = length(listOfColour) == rowLength -- if the length of our listOfColour is equal to the amount of squares, then the entire row is filled, therefore Completed
-  where
-    rowLength = length row            -- Gets the amount of squares in the row
-    listOfColour = filter isJust row  -- Filters out all the colours into a single list
+isComplete row = all isJust row -- Filters out all the colours into a single list
 
 -- Clears the lines and returns amount of rows cleared, and the new Shape
 clearLines :: Shape -> (Int,Shape)
